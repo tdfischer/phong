@@ -80,7 +80,7 @@ class AI(object):
             try:
               p.start(e)
             except:
-              logging.exception("Error during startup of %s", p)
+              self._log.exception("Error during startup of %s", p)
         continue
       if isinstance(e, StopEvent):
         self._log.info("Got StopEvent, quitting!")
@@ -89,7 +89,7 @@ class AI(object):
             try:
               p.stop(e)
             except:
-              logging.exception("Error while processing stop event in %s", p)
+              self._log.exception("Error while processing stop event in %s: %s", p, e)
         self.processEvent(e)
         return
       self._process(e)
@@ -103,7 +103,7 @@ class AI(object):
           try:
             priority = p.priority(event)
           except:
-            self._log.exception("Error while determining priority with %s/%s", m, p)
+            self._log.exception("Error while determining priority with %s/%s: %s", m, p, event)
           if priority is not None:
             runOrder.append((priority, p))
       if len(runOrder) == 0:
@@ -117,7 +117,7 @@ class AI(object):
           ret = p[1].process(event)
           event.markSeen(p[1])
         except:
-          self._log.exception("Error while processing with %s", p[1])
+          self._log.exception("Error while processing with %s: %s", p[1], event)
           pass
         if ret is True:
           self._log.debug("Got True back from %s, halting processing.", p)
