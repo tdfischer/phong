@@ -34,9 +34,29 @@ class NLTK(Processor):
       for phrase in event['structure'].subtrees():
         for word in phrase:
           if len(word) == 2 and word[1] == 'NN':
-            thought = InternalEvent()
-            thought['subject'] = word[0]
-            self.enqueueEvent(thought)
+            self.enqueueEvent(InternalEvent(event, subject=word[0]))
+
+class Questions(Processor):
+  def priority(self, event):
+    if 'text' in event and not event.seen(self):
+      return 0
+
+  def process(self, event):
+    if 'text' in event:
+      if event['text'].endswith('?'):
+        event['is-question'] = True
+        self._log.debug(event['structure'])
+
+class DirectedAtSelf(Processor):
+  def priority(self, event):
+    if 'recipient' in event and not event.seen(self):
+      return 0
+
+  def process(self, event):
+    if event['recipient'] == self._module._ai.personality.name:
+      event['to-self'] = True
+    else:
+      event['to-self'] = False
 
 class StopRepeating(Processor):
   def start(self, event):
@@ -82,3 +102,5 @@ class Context(Module):
     self.addProcessor(Wordnet(self))
     self.addProcessor(NLTK(self))
     self.addProcessor(StopRepeating(self))
+    self.addProcessor(Questions(self))
+    self.addProcessor(DirectedAtSelf(self))
