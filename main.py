@@ -21,7 +21,8 @@ class ConsoleFeedback(Module):
     self.addProcessor(PrintProcessor(self))
 
 def main():
-  personality = Personality('Test', '/tmp/test-ai/')
+  #personality = Personality('Test', '/tmp/test-ai/')
+  personality = Personality('Phong', '/tmp/phong-ai/')
   ai = AI(personality)
   ai.loadModule(Context(ai))
   ai.loadModule(Markov(ai))
@@ -36,10 +37,9 @@ def main():
     except KeyboardInterrupt:
       ai.stop()
       return
-    event = IncomingEvent()
-    event['text'] = line.strip()
+    event = IncomingEvent(text=line.strip(), sender='console', recipient=personality.name)
     ai.processEvent(event)
 
 if __name__ == "__main__":
-  logging.basicConfig(level=logging.INFO)
+  logging.basicConfig(level=logging.DEBUG)
   main()
