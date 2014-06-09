@@ -68,6 +68,21 @@ class Analyzer(Processor):
       prev = word
     self._db.addPair(word, None)
 
+class Answerer(Processor):
+  def __init__(self, db, module):
+    super(Answerer, self).__init__(module)
+    self._db = db
+
+  def priority(self, event):
+    self._log.debug("Testing %s", event)
+    if 'subject' in event and isinstance(event, IncomingEvent) and not event.seen(self) and event['to-self'] and event['is-question']:
+      return 100
+
+  def process(self, event):
+    self._log.info("Producing response to question %s", event)
+    reply = self._db.buildReply(str(event['subject']))
+    self.enqueueEvent(OutgoingEvent(event, text=reply))
+
 class Producer(Processor):
   def __init__(self, db, module):
     super(Producer, self).__init__(module)
@@ -79,10 +94,8 @@ class Producer(Processor):
 
   def process(self, event):
     self._log.debug("Producing phrase for %s", event)
-    response = OutgoingEvent()
-    response['text'] = self._db.buildReply(str(event['subject']))
-    response['subject'] = event['subject']
-    self.enqueueEvent(response)
+    reply = self._db.buildReply(str(event['subject']))
+    self.enqueueEvent(OutgoingEvent(event, text=reply))
 
 class Markov(Module):
   def __init__(self, ai):
@@ -90,3 +103,4 @@ class Markov(Module):
     self._db = MarkovDB(self._ai.personality.filename(self, 'markov.sqlite3'))
     self.addProcessor(Analyzer(self._db, self))
     self.addProcessor(Producer(self._db, self))
+    self.addProcessor(Answerer(self._db, self))
