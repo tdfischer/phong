@@ -16,6 +16,7 @@ start() ->
 
 %% app behaviour
 start(_Type, _StartArgs) ->
+    reloader:start(),
     {ok, Sup} = supervisor:start_link({local, ?SUPERVISOR}, ?SUPERVISOR, []),
     {ok, SettingsFile} = init:get_argument(conf),
     {ok, Settings} = file:consult(SettingsFile),
