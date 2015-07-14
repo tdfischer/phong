@@ -3,7 +3,7 @@
 
 -export([new/1, pid/1, connect/1, disconnect/1, reconnect/1]).
 -export([send_event/2, send_data/2, send_message/4]).
--export([privmsg/3, notice/3, join/2, part/2, ping/2, pong/2, nick/2]).
+-export([privmsg/3, action/3, notice/3, join/2, part/2, ping/2, pong/2, nick/2]).
 -export([add_plugin/3, delete_plugin/3, which_plugins/1]).
 
 new(IrcbotRef) ->
@@ -42,6 +42,8 @@ send_data(Data, {?MODULE, IrcbotRef}) ->
 send_message(Cmd, Destination, Msg, {?MODULE, IrcbotRef}) ->
     send_data([Cmd, " ", Destination, " :", Msg], {?MODULE, IrcbotRef}).
 
+action(Destination, Msg, {?MODULE, IrcbotRef}) ->
+    send_message("PRIVMSG", Destination, [1, "ACTION ", Msg], {?MODULE, IrcbotRef}).
 
 privmsg(Destination, Msg, {?MODULE, IrcbotRef}) ->
     send_message("PRIVMSG", Destination, Msg, {?MODULE, IrcbotRef}).
