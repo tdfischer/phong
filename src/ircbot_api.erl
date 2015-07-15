@@ -4,7 +4,6 @@
 -export([new/1, pid/1, connect/1, disconnect/1, reconnect/1]).
 -export([send_event/2, send_data/2, send_message/4]).
 -export([privmsg/3, action/3, notice/3, join/2, part/2, ping/2, pong/2, nick/2]).
--export([add_plugin/3, delete_plugin/3, which_plugins/1]).
 
 new(IrcbotRef) ->
     {?MODULE, IrcbotRef}.
@@ -21,16 +20,6 @@ disconnect({?MODULE, IrcbotRef}) ->
 reconnect({?MODULE, IrcbotRef}) ->
     disconnect({?MODULE, IrcbotRef}),
     connect({?MODULE, IrcbotRef}).
-
-
-add_plugin(Plugin, Args, {?MODULE, IrcbotRef}) ->
-    gen_fsm:sync_send_all_state_event(IrcbotRef, {add_plugin, Plugin, Args}).
-
-delete_plugin(Plugin, Args, {?MODULE, IrcbotRef}) ->
-    gen_fsm:sync_send_all_state_event(IrcbotRef, {delete_plugin, Plugin, Args}).
-
-which_plugins({?MODULE, IrcbotRef}) ->
-    gen_fsm:sync_send_all_state_event(IrcbotRef, which_plugins).
 
 
 send_event(Event, {?MODULE, IrcbotRef}) ->

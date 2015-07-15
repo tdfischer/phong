@@ -56,16 +56,26 @@ start_link(Settings) ->
 %%% `Settings` should be a proplist ussually created from a
 %%% config file with file:consult
 init(Settings) ->
-    case proplists:get_value(ssl, Settings) of
+    Ssl = case proplists:get_value(ssl, Settings) of
         true ->
-            Ssl = true;
+            true;
         _ ->
-            Ssl = false
+            false
     end,
     Nick = proplists:get_value(nickname, Settings),
     Password = proplists:get_value(password, Settings),
     Server = proplists:get_value(server, Settings),
-    {ok, Plugins} = ircbot_plugins:start_link(Settings),
+
+    {ok, Plugins} = gen_event:start_link(),
+    Channels = proplists:get_value(channels, Settings, []),
+    gen_event:add_handler(Plugins, ircbot_plugin_channels, Channels),
+    gen_event:add_handler(Plugins, ircbot_plugin_pong, []),
+    gen_event:add_handler(Plugins, ircbot_plugin_ctcp, []),
+    gen_event:add_handler(Plugins, ircbot_plugin_autojoin, []),
+    gen_event:add_handler(Plugins, ircbot_plugin_learn, []),
+    gen_event:add_handler(Plugins, ircbot_plugin_nickserv,
+                          proplists:get_value(nickserv_password, Settings, "")),
+
     StateData = #state{nickname=Nick,password=Password,server=Server,plugins=Plugins,backoff=0,ssl=Ssl},
     gen_fsm:send_event(self(), connect),
     {ok, standby, StateData}.
@@ -165,8 +175,8 @@ registering({received, Msg}, StateData) ->
         [_, _, <<"001">>, _, _] ->
             Self = ircbot_api:new(self()),
             Plugins = StateData#state.plugins,
-            ircbot_plugins:notify(Plugins, {Self, online}),
-            ircbot_plugins:notify(Plugins, {in, Self, IrcMessage}),
+            notify(Plugins, {Self, online}),
+            notify(Plugins, {in, Self, IrcMessage}),
             {next_state, ready, StateData};
         [_, _, <<"433">>, <<"*">>, <<Nick/binary>>, _] ->
             ChangeNick = [<<"NICK ">>, Nick, ?NICK_SUFFIX],
@@ -193,7 +203,7 @@ ready({received, Msg}, StateData) ->
     {match, IrcMessage} = ircbot_lib:irc_parse(Msg),
     Self = ircbot_api:new(self()),
     Plugins = StateData#state.plugins,
-    ircbot_plugins:notify(Plugins, {in, Self, IrcMessage}), % notify all plugins
+    notify(Plugins, {in, Self, IrcMessage}), % notify all plugins
     {next_state, ready, StateData};
 
 
@@ -231,22 +241,6 @@ handle_sync_event(disconnect, _From, StateName, StateData) ->
     NewStateData = StateData#state{backoff=0,timer=undefined},
     {reply, ok, standby, NewStateData};
 
-%% Plugin managemenet
-handle_sync_event({add_plugin, Plugin, Args}, _From, StateName, StateData) ->
-    Plugins = StateData#state.plugins,
-    ircbot_plugins:add_handler(Plugins, Plugin, Args),
-    {reply, ok, StateName, StateData};
-
-handle_sync_event({delete_plugin, Plugin, Args}, _From, StateName, StateData) ->
-    Plugins = StateData#state.plugins,
-    ircbot_plugins:delete_handler(Plugins, Plugin, Args),
-    {reply, ok, StateName, StateData};
-
-handle_sync_event(which_plugins, _From, StateName, StateData) ->
-    Plugins = StateData#state.plugins,
-    Reply = ircbot_plugins:which_handlers(Plugins),
-    {reply, Reply, StateName, StateData};
-
 handle_sync_event(_Ev, _From, _StateName, _StateData) ->
     {stop, "Should never happen! Please don't use gen_fsm:sync_send_all_state_event"}.
 
@@ -261,3 +255,6 @@ code_change(_OldVsn, StateName, StateData, _Extra) ->
     {ok, StateName, StateData}.
 
 terminate(_Reason, _StateName, _StateData) -> ok.
+
+notify(GenEv, Msg) ->
+    gen_event:notify(GenEv, Msg).

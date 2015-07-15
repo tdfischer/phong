@@ -3,7 +3,7 @@
     {vsn, "0.01"},
     {modules, [
         ircbot_app, ircbot_sup, ircbot_fsm, ircbot_api,
-        ircbot_lib, ircbot_plugins,
+        ircbot_lib,
         pong_plugin, ctcp_plugin,
         reloader
     ]},
