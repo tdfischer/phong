@@ -15,11 +15,14 @@ init(_Args) ->
 do_learn(Irc, State, Channel, {Pattern, Response}) ->
     case brain:learn(State#state.brain, {Pattern, Response}) of
       {ok, new} ->
-          Irc:privmsg(<<"#", Channel/binary>>, ["Okay, ", Pattern, " means ", Response]);
+          ircbot_api:privmsg(<<"#", Channel/binary>>, ["Okay, ", Pattern, " means ", Response],
+                             {ircbot_api, Irc});
       {ok, appended} ->
-          Irc:privmsg(<<"#", Channel/binary>>, ["Okay, ", Pattern, " also means ", Response]);
+          ircbot_api:privmsg(<<"#", Channel/binary>>, ["Okay, ", Pattern, " also means ", Response],
+                             {ircbot_api, Irc});
       {error, _} ->
-          Irc:privmsg(<<"#", Channel/binary>>, ["I could not learn :("])
+          ircbot_api:privmsg(<<"#", Channel/binary>>, ["I could not learn :("],
+                             {ircbot_api, Irc})
     end.
 
 process_vars(Message, [First|Rest]) ->
@@ -36,15 +39,19 @@ process_vars(Message, []) ->
 do_match(Irc, State, Channel, Text, Vars) ->
     case brain:match(State#state.brain, Text) of
         {privmsg, Reply} ->
-            Irc:privmsg(<<"#", Channel/binary>>, [process_vars(Reply, Vars)]);
+            ircbot_api:privmsg(<<"#", Channel/binary>>, [process_vars(Reply,
+                                                                      Vars)],
+                               {ircbot_api, Irc});
         {action, Reply} ->
-            Irc:action(<<"#", Channel/binary>>, [process_vars(Reply, Vars)]);
+            ircbot_api:action(<<"#", Channel/binary>>, [process_vars(Reply,
+                                                                     Vars)],
+                              {ircbot_api, Irc});
         none -> ok
     end.
 
 handle_event(Msg, State) ->
     case Msg of
-        {in, Ref, [Sender, _User, <<"PRIVMSG">>, <<"#",Channel/binary>>, Text]} ->
+        {in, {_,Ref}, [Sender, _User, <<"PRIVMSG">>, <<"#",Channel/binary>>, Text]} ->
             case re:run(Text, "(.*) is (.*)", [unicode, {capture, all, list}]) of
                 {match, [_, Pattern, Response]} ->
                     do_learn(Ref, State, Channel, {Pattern, Response});
