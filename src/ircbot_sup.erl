@@ -10,5 +10,8 @@
 init([]) ->
     {ok, {
         {simple_one_for_one, 10, 60},
-        [?CHILD(ircbot_fsm)]
+        [?CHILD(ircbot_fsm), ?CHILD(brain)]
     }}.
+
+brain(SupRef) ->
+    supervisor:which_children(SupRef) -> [{Id, Child, Type, Modules}]
